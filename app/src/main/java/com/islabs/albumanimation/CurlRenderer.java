@@ -47,7 +47,7 @@ public class CurlRenderer implements GLSurfaceView.Renderer {
 	private int mBackgroundColor;
 	// Curl meshes used for static and dynamic rendering.
 	private Vector<CurlMesh> mCurlMeshes;
-	private RectF mMargins = new RectF();
+	public RectF mMargins = new RectF();
 	private Observer mObserver;
 	// Page rectangles.
 	private RectF mPageRectLeft;
