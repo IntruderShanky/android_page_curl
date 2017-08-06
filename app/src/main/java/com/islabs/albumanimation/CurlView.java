@@ -20,7 +20,6 @@ import android.content.Context;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.opengl.GLSurfaceView;
-import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -38,7 +37,6 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
         CurlRenderer.Observer, ScaleGestureDetector.OnScaleGestureListener {
 
     private boolean shouldCurlStart = false;
-    private int pageDirection;
 
     // Curl state. We are flipping none, left or right page.
     private static final int CURL_LEFT = 1;
@@ -98,8 +96,6 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
     // One page is the default.
     private int mViewMode = SHOW_ONE_PAGE;
 
-    private double originalHeight , originalWidth;
-
     /**
      * Default constructor.
      */
@@ -140,10 +136,12 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         setOnTouchListener(this);
         scaleGestureDetector = new ScaleGestureDetector(ctx, this /* Scale Gesture Detector */);
-        gestureDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener(){
+        gestureDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDoubleTap(MotionEvent e) {
-                Toast.makeText(getContext(), "Double Tapped", Toast.LENGTH_SHORT).show();
+                if (scaleFactor == 1.0f) scaleFactor = 2.0f;
+                else scaleFactor = 1.0f;
+                zoomView();
                 return super.onDoubleTap(e);
             }
         });
@@ -244,9 +242,8 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
     @Override
     public boolean onTouch(View view, MotionEvent me) {
         gestureDetector.onTouchEvent(me);
-        Log.d("CURL", (mAnimate) + "    " + (mPageProvider) + "    " + me.getAction() +  "   " + me.getX() + "   "+ me.getY() + "   " +me.getPointerCount() );
-        if (me.getPointerCount() > 1){
-            zoomView(me);
+        if (me.getPointerCount() > 1 || scaleFactor != 1.0f) {
+            scaleGestureDetector.onTouchEvent(me);
             return true;
         }
         if (mAnimate || mPageProvider == null) {
@@ -267,7 +264,6 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
 
         switch (me.getAction()) {
             case MotionEvent.ACTION_DOWN: {
-                Log.d("CURL", "MOTION DOWN");
                 shouldCurlStart = true;
                 x1 = me.getX();
                 y1 = me.getY();
@@ -277,13 +273,12 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
                 y2 = me.getY();
 
                 double dx = x2 - x1;
-                double dy = y2-y1;
+                double dy = y2 - y1;
                 dx *= dx;
                 dy *= dy;
 
-                if (shouldCurlStart && Math.sqrt(dx + dy)> 10) {
+                if (shouldCurlStart && Math.sqrt(dx + dy) > 10) {
                     shouldCurlStart = false;
-                    Log.d("CURL", "MOTION MOVE SHOULD CURL");
                     // Once we receive pointer down event its position is mapped to
                     // right or left edge of page and that'll be the position from where
                     // user is holding the paper to make curl happen.
@@ -307,8 +302,7 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
                         // us there is a visible page at all.
                         if (mDragStartPos.x < rightRect.left && mCurrentIndex > 0) {
                             mDragStartPos.x = leftRect.left;
-					startCurl(CURL_LEFT);
-                            pageDirection = CURL_LEFT;
+                            startCurl(CURL_LEFT);
                         }
                         // Otherwise check pointer is on right page's side.
                         else if (mDragStartPos.x >= rightRect.left
@@ -318,15 +312,13 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
                                     && mCurrentIndex >= mPageProvider.getPageCount() - 1) {
                                 return false;
                             }
-                            pageDirection = CURL_RIGHT;
-					startCurl(CURL_RIGHT);
+                            startCurl(CURL_RIGHT);
                         }
                     } else if (mViewMode == SHOW_ONE_PAGE) {
                         float halfX = (rightRect.right + rightRect.left) / 2;
                         if (mDragStartPos.x < halfX && mCurrentIndex > 0) {
                             mDragStartPos.x = rightRect.left;
                             startCurl(CURL_LEFT);
-                            pageDirection = CURL_LEFT;
                         } else if (mDragStartPos.x >= halfX
                                 && mCurrentIndex < mPageProvider.getPageCount()) {
                             mDragStartPos.x = rightRect.right;
@@ -334,7 +326,6 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
                                     && mCurrentIndex >= mPageProvider.getPageCount() - 1) {
                                 return false;
                             }
-                            pageDirection = CURL_RIGHT;
                             startCurl(CURL_RIGHT);
                         }
                     }
@@ -344,15 +335,13 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
                     if (mCurlState == CURL_NONE) {
                         return false;
                     }
-                }else {
-                    Log.d("CURL", "MOTION");
+                } else {
                     updateCurlPos(mPointerPos);
                 }
                 break;
             }
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
-                System.out.println("CURL MOTION UP");
                 if (mCurlState == CURL_LEFT || mCurlState == CURL_RIGHT) {
                     // Animation source is the point from where animation starts.
                     // Also it's handled in a way we actually simulate touch events
@@ -394,8 +383,11 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
         return true;
     }
 
-    private void zoomView(MotionEvent me) {
-        scaleGestureDetector.onTouchEvent(me);
+    private void zoomView() {
+        float vMargin = (1.0f - (mRenderer.vPart * scaleFactor)) / 2;
+        float hMargin = (1.0f - (mRenderer.hPart * scaleFactor)) / 2;
+        this.setMargins(hMargin, vMargin, hMargin, vMargin);
+        invalidate();
     }
 
     /**
@@ -521,6 +513,7 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
      */
     public void setMargins(float left, float top, float right, float bottom) {
         mRenderer.setMargins(left, top, right, bottom);
+
     }
 
     /**
@@ -821,17 +814,9 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
 
     @Override
     public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
-        System.out.println("Scale ");
         scaleFactor *= scaleGestureDetector.getScaleFactor();
-
-        // Don't let the object get too small or too large.
-        scaleFactor = Math.max(1f, Math.min(scaleFactor, 5.0f));
-        double vmOffset = (originalHeight * scaleFactor) / 2;
-        double hmOffset = (originalWidth * scaleFactor) / 2;
-
-
-
-        invalidate();
+        scaleFactor = Math.max(1f, Math.min(scaleFactor, 2.0f));
+        zoomView();
         return true;
     }
 
@@ -842,7 +827,6 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
 
     @Override
     public void onScaleEnd(ScaleGestureDetector scaleGestureDetector) {
-        System.out.println("Scale End");
     }
 
     /**
