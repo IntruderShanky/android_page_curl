@@ -21,12 +21,10 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.Toast;
 
 /**
  * OpenGL ES View.
@@ -158,7 +156,7 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
     @Override
     public void onDrawFrame() {
         // We are not animating.
-        if (mAnimate == false) {
+        if (!mAnimate) {
             return;
         }
 
