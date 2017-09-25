@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package com.islabs.albumanimation;
+package com.digitalbithub.pagecurl;
 
 import android.content.Context;
 import android.graphics.PointF;
@@ -30,11 +30,14 @@ import android.view.View;
  * OpenGL ES View.
  *
  * @author harism
+ *         <p>
+ *         modified By DigitalBitHub
  */
 public class CurlView extends GLSurfaceView implements View.OnTouchListener,
         CurlRenderer.Observer, ScaleGestureDetector.OnScaleGestureListener {
 
     private boolean shouldCurlStart = false;
+    private boolean doubleTapZoomEnabled = true;
 
     // Curl state. We are flipping none, left or right page.
     private static final int CURL_LEFT = 1;
@@ -208,6 +211,7 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
         }
     }
 
+
     @Override
     public void onPageSizeChanged(int width, int height) {
         mPageBitmapWidth = width;
@@ -239,7 +243,8 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
 
     @Override
     public boolean onTouch(View view, MotionEvent me) {
-        gestureDetector.onTouchEvent(me);
+        if (doubleTapZoomEnabled)
+            gestureDetector.onTouchEvent(me);
         if (me.getPointerCount() > 1 || scaleFactor != 1.0f) {
             scaleGestureDetector.onTouchEvent(me);
             return true;
@@ -379,6 +384,14 @@ public class CurlView extends GLSurfaceView implements View.OnTouchListener,
         }
 
         return true;
+    }
+
+    public boolean isDoubleTapZoomEnabled() {
+        return doubleTapZoomEnabled;
+    }
+
+    public void setDoubleTapZoomEnabled(boolean doubleTapZoomEnabled) {
+        this.doubleTapZoomEnabled = doubleTapZoomEnabled;
     }
 
     private void zoomView() {

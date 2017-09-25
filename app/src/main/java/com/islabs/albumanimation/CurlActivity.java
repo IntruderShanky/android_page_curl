@@ -26,6 +26,9 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 
+import com.digitalbithub.pagecurl.CurlPage;
+import com.digitalbithub.pagecurl.CurlView;
+
 /**
  * Simple Activity for curl testing.
  *

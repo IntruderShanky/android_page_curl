@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-package com.islabs.albumanimation;
+package com.digitalbithub.pagecurl;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
